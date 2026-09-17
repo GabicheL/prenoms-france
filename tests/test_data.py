@@ -6,12 +6,11 @@ import pytest
 from prenoms.data import load_nat_file
 
 CSV_CONTENT = (
-    "sexe;preusuel;annais;nombre\n"
-    "1;Jean;1950;120\n"
-    "1;Jean;1951;110\n"
-    "2;Marie;1950;95\n"
-    "2;Marie;XXXX;3\n"
-    "1;_PRENOMS_RARES;1950;42\n"
+    "sexe;prenom;periode;valeur;rang\n"
+    "1;Jean;1950;120;5\n"
+    "1;Jean;1951;110;7\n"
+    "2;Marie;1950;95;3\n"
+    "1;;1950;10;999\n"
 )
 
 
@@ -24,13 +23,13 @@ def sample_csv(tmp_path: Path) -> Path:
 
 def test_returns_expected_columns(sample_csv: Path) -> None:
     df = load_nat_file(sample_csv)
-    assert list(df.columns) == ["prenom", "sexe", "annee", "naissances"]
+    assert list(df.columns) == ["prenom", "sexe", "annee", "naissances", "rang"]
 
 
-def test_drops_unknown_years(sample_csv: Path) -> None:
+def test_drops_rows_without_prenom(sample_csv: Path) -> None:
     df = load_nat_file(sample_csv)
-    assert (df["annee"] == "XXXX").sum() == 0
-    assert len(df) == 4  # la ligne annais=XXXX est écartée
+    assert len(df) == 3  # la ligne sans prénom est écartée
+    assert df["prenom"].isna().sum() == 0
 
 
 def test_maps_sex_codes_to_letters(sample_csv: Path) -> None:
@@ -45,9 +44,10 @@ def test_uppercases_first_names(sample_csv: Path) -> None:
     assert "Jean" not in df["prenom"].values
 
 
-def test_keeps_rare_names_bucket(sample_csv: Path) -> None:
+def test_keeps_rang_column(sample_csv: Path) -> None:
     df = load_nat_file(sample_csv)
-    assert "_PRENOMS_RARES" in df["prenom"].values
+    marie_rang = df.loc[df["prenom"] == "MARIE", "rang"].iloc[0]
+    assert marie_rang == 3
 
 
 def test_missing_file_raises(tmp_path: Path) -> None:

@@ -1,17 +1,22 @@
 """Chargement et nettoyage du fichier national des prénoms (INSEE).
 
 Source : https://www.insee.fr/fr/statistiques/8595130
-Format attendu du fichier national (ex. prenoms-2025-nat_csv.zip),
+Colonnes du fichier national (édition 2025, ex. prenoms-2025-nat_csv.zip),
 séparateur ';' :
 
-    sexe;preusuel;annais;nombre
+    sexe;prenom;periode;valeur;rang
 
-- sexe     : 1 (masculin) ou 2 (féminin)
-- preusuel : prénom usuel en majuscules ; "_PRENOMS_RARES" regroupe les
-             prénoms trop peu donnés une année pour être publiés
-             individuellement
-- annais   : année de naissance (AAAA) ; "XXXX" = année inconnue
-- nombre   : nombre de naissances pour cette ligne
+- sexe    : 1 (masculin) ou 2 (féminin)
+- prenom  : prénom usuel
+- periode : année de naissance (AAAA)
+- valeur  : nombre de naissances pour ce prénom, ce sexe, cette année
+- rang    : rang du prénom cette année-là, au sein de son sexe
+            (1 = prénom le plus donné)
+
+Remarque : des éditions plus anciennes de ce fichier utilisaient un autre
+schéma (sexe;preusuel;annais;nombre, avec un code "XXXX" pour les années
+inconnues et un prénom "_PRENOMS_RARES" regroupant les prénoms peu donnés).
+Ce module cible le schéma de l'édition 2025, vérifié sur le fichier réel.
 """
 from __future__ import annotations
 
@@ -20,8 +25,7 @@ from pathlib import Path
 import pandas as pd
 
 SEX_LABELS = {1: "M", 2: "F"}
-UNKNOWN_YEAR_CODE = "XXXX"
-EXPECTED_COLUMNS = {"sexe", "preusuel", "annais", "nombre"}
+EXPECTED_COLUMNS = {"sexe", "prenom", "periode", "valeur", "rang"}
 
 
 def load_nat_file(csv_path: str | Path) -> pd.DataFrame:
@@ -32,10 +36,9 @@ def load_nat_file(csv_path: str | Path) -> pd.DataFrame:
 
     Returns:
         Un DataFrame avec les colonnes ``prenom`` (str), ``sexe``
-        (str, "M"/"F"), ``annee`` (int) et ``naissances`` (int), trié
-        par prénom puis année. Les lignes à l'année inconnue ("XXXX")
-        sont écartées car elles ne peuvent pas être placées sur une
-        frise temporelle.
+        (str, "M"/"F"), ``annee`` (int), ``naissances`` (int) et
+        ``rang`` (int), trié par prénom puis année. Les rares lignes
+        sans prénom renseigné sont écartées.
 
     Raises:
         FileNotFoundError: si ``csv_path`` n'existe pas.
@@ -58,14 +61,15 @@ def load_nat_file(csv_path: str | Path) -> pd.DataFrame:
             f"Colonnes trouvées : {list(df.columns)}"
         )
 
-    df = df[df["annais"] != UNKNOWN_YEAR_CODE].copy()
+    df = df.dropna(subset=["prenom"]).copy()
 
     cleaned = pd.DataFrame(
         {
-            "prenom": df["preusuel"].astype(str).str.strip().str.upper(),
+            "prenom": df["prenom"].astype(str).str.strip().str.upper(),
             "sexe": df["sexe"].astype(int).map(SEX_LABELS),
-            "annee": df["annais"].astype(int),
-            "naissances": df["nombre"].astype(int),
+            "annee": df["periode"].astype(int),
+            "naissances": df["valeur"].astype(int),
+            "rang": df["rang"].astype(int),
         }
     )
     return cleaned.sort_values(["prenom", "annee"]).reset_index(drop=True)
