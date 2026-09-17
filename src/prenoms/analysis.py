@@ -1,8 +1,7 @@
 """Fonctions d'analyse sur les données nettoyées des prénoms.
 
-Toutes les fonctions attendent en entrée le DataFrame renvoyé par
-``prenoms.data.load_nat_file`` (colonnes : prenom, sexe, annee,
-naissances, rang).
+Toutes les fonctions prennent en entrée le DataFrame renvoyé par
+prenoms.data.load_nat_file (colonnes : prenom, sexe, annee, naissances, rang).
 """
 from __future__ import annotations
 
@@ -14,23 +13,7 @@ VALID_SEXES = {"M", "F"}
 def evolution_prenom(
     df: pd.DataFrame, prenom: str, sexe: str | None = None
 ) -> pd.DataFrame:
-    """Évolution annuelle du nombre de naissances pour un prénom.
-
-    Args:
-        df: DataFrame nettoyé (voir ``prenoms.data.load_nat_file``).
-        prenom: Prénom recherché (insensible à la casse).
-        sexe: "M", "F", ou None pour cumuler les deux sexes.
-
-    Returns:
-        DataFrame trié par année. Colonnes ``annee`` et ``naissances``
-        si ``sexe`` est None (les deux sexes sont alors cumulés par
-        année) ; colonnes ``annee``, ``naissances`` et ``rang`` si un
-        sexe est précisé.
-
-    Raises:
-        ValueError: si le prénom (éventuellement filtré par sexe) est
-            absent du fichier, ou si ``sexe`` n'est ni "M" ni "F".
-    """
+    """Évolution annuelle des naissances pour un prénom (sexe=None -> les deux cumulés)."""
     prenom_norm = prenom.strip().upper()
     subset = df[df["prenom"] == prenom_norm]
 
@@ -58,11 +41,7 @@ def evolution_prenom(
 
 
 def annee_pic(df: pd.DataFrame, prenom: str, sexe: str | None = None) -> tuple[int, int]:
-    """Année où le prénom a été le plus donné, et le nombre de naissances.
-
-    Returns:
-        Un tuple ``(annee, naissances)``.
-    """
+    """Année où le prénom a été le plus donné, et le nombre de naissances cette année-là."""
     evolution = evolution_prenom(df, prenom, sexe)
     ligne = evolution.loc[evolution["naissances"].idxmax()]
     return int(ligne["annee"]), int(ligne["naissances"])
@@ -73,24 +52,8 @@ def comparer_prenoms(
 ) -> pd.DataFrame:
     """Met plusieurs prénoms côte à côte pour comparaison graphique.
 
-    Contrairement à ``evolution_prenom``, un prénom sans aucune donnée
-    pour le sexe demandé n'interrompt pas la comparaison : sa colonne
-    est simplement remplie de zéros (utile par ex. pour comparer un
-    prénom mixte à un prénom très genré sur un seul sexe).
-
-    Args:
-        df: DataFrame nettoyé.
-        prenoms: Liste de prénoms à comparer.
-        sexe: "M", "F", ou None pour cumuler les deux sexes.
-
-    Returns:
-        DataFrame large : une colonne ``annee`` puis une colonne par
-        prénom (nombre de naissances cette année-là, 0 si le prénom
-        n'a pas été donné cette année-là).
-
-    Raises:
-        ValueError: si ``prenoms`` est vide, si ``sexe`` est invalide,
-            ou si aucun des prénoms demandés n'a la moindre donnée.
+    Contrairement à evolution_prenom, un prénom sans donnée pour le sexe
+    demandé n'interrompt pas la comparaison : sa colonne est mise à zéro.
     """
     if not prenoms:
         raise ValueError("La liste de prénoms à comparer est vide.")
@@ -114,22 +77,7 @@ def comparer_prenoms(
 
 
 def palmares(df: pd.DataFrame, annee: int, sexe: str, top: int = 10) -> pd.DataFrame:
-    """Classement des prénoms les plus donnés une année donnée.
-
-    Args:
-        df: DataFrame nettoyé.
-        annee: Année du palmarès.
-        sexe: "M" ou "F".
-        top: Nombre de prénoms à retourner (par défaut 10).
-
-    Returns:
-        DataFrame avec les colonnes ``rang``, ``prenom`` et
-        ``naissances``, trié par rang croissant.
-
-    Raises:
-        ValueError: si ``sexe`` est invalide, ``top`` n'est pas positif,
-            ou qu'aucune donnée n'existe pour cette année/ce sexe.
-    """
+    """Top prénoms les plus donnés une année donnée, pour un sexe."""
     sexe = _validate_sexe(sexe)
     if top <= 0:
         raise ValueError("`top` doit être un entier strictement positif.")

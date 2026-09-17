@@ -1,22 +1,14 @@
 """Chargement et nettoyage du fichier national des prénoms (INSEE).
 
 Source : https://www.insee.fr/fr/statistiques/8595130
-Colonnes du fichier national (édition 2025, ex. prenoms-2025-nat_csv.zip),
-séparateur ';' :
+Colonnes du fichier (édition 2025), séparateur ';' : sexe;prenom;periode;valeur;rang
+- sexe : 1 (masculin) ou 2 (féminin)
+- prenom, periode (année), valeur (naissances cette année-là), rang (classement)
 
-    sexe;prenom;periode;valeur;rang
-
-- sexe    : 1 (masculin) ou 2 (féminin)
-- prenom  : prénom usuel
-- periode : année de naissance (AAAA)
-- valeur  : nombre de naissances pour ce prénom, ce sexe, cette année
-- rang    : rang du prénom cette année-là, au sein de son sexe
-            (1 = prénom le plus donné)
-
-Remarque : des éditions plus anciennes de ce fichier utilisaient un autre
-schéma (sexe;preusuel;annais;nombre, avec un code "XXXX" pour les années
-inconnues et un prénom "_PRENOMS_RARES" regroupant les prénoms peu donnés).
-Ce module cible le schéma de l'édition 2025, vérifié sur le fichier réel.
+Les éditions précédentes du fichier INSEE utilisaient un autre schéma
+(sexe;preusuel;annais;nombre) - je m'étais basé dessus au départ avant de
+regarder le vrai fichier téléchargé, d'où l'ajustement (voir l'historique
+de commits).
 """
 from __future__ import annotations
 
@@ -29,21 +21,7 @@ EXPECTED_COLUMNS = {"sexe", "prenom", "periode", "valeur", "rang"}
 
 
 def load_nat_file(csv_path: str | Path) -> pd.DataFrame:
-    """Charge le fichier national des prénoms INSEE et le nettoie.
-
-    Args:
-        csv_path: Chemin vers le fichier CSV brut (séparateur ';').
-
-    Returns:
-        Un DataFrame avec les colonnes ``prenom`` (str), ``sexe``
-        (str, "M"/"F"), ``annee`` (int), ``naissances`` (int) et
-        ``rang`` (int), trié par prénom puis année. Les rares lignes
-        sans prénom renseigné sont écartées.
-
-    Raises:
-        FileNotFoundError: si ``csv_path`` n'existe pas.
-        ValueError: si les colonnes attendues sont absentes du fichier.
-    """
+    """Charge et nettoie le fichier national des prénoms INSEE."""
     csv_path = Path(csv_path)
     if not csv_path.exists():
         raise FileNotFoundError(
@@ -76,11 +54,11 @@ def load_nat_file(csv_path: str | Path) -> pd.DataFrame:
 
 
 def _read_with_encoding_fallback(csv_path: Path) -> pd.DataFrame:
-    """Lit le CSV INSEE en gérant les deux encodages historiquement utilisés."""
+    # le fichier INSEE n'est pas toujours en utf-8 selon l'édition téléchargée
     last_error: UnicodeDecodeError | None = None
     for encoding in ("utf-8", "latin-1"):
         try:
             return pd.read_csv(csv_path, sep=";", encoding=encoding, dtype=str)
         except UnicodeDecodeError as exc:
             last_error = exc
-    raise last_error  # pragma: no cover - filet de sécurité
+    raise last_error  # pragma: no cover
