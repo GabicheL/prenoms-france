@@ -2,9 +2,14 @@
 
 ![Tests](https://github.com/GabicheL/prenoms-france/actions/workflows/tests.yml/badge.svg)
 
-Exploration et visualisation du [fichier des prénoms de l'INSEE](https://www.insee.fr/fr/statistiques/8595130) :
-tous les prénoms donnés en France depuis 1900, sous forme de notebook d'analyse
-puis d'application web interactive.
+Projet perso pour mon portfolio, fait en marge de mon M1 Informatique pour la
+Décision et la Donnée à Dauphine. Je voulais un jeu de données réel plutôt
+qu'un dataset jouet pour pratiquer pandas et Streamlit : le [fichier des
+prénoms de l'INSEE](https://www.insee.fr/fr/statistiques/8595130), qui
+recense tous les prénoms donnés en France depuis 1900, s'y prêtait bien (et
+regarder l'évolution de son propre prénom est un bon test, cf capture
+ci-dessous). J'ai commencé par un notebook d'exploration, puis j'ai eu envie
+d'en faire une version interactive avec Streamlit.
 
 ## Aperçu
 
@@ -43,7 +48,7 @@ prenoms-france/
 ```
 
 Le code d'analyse vit dans `src/prenoms/`, indépendant du notebook et de
-l'application : les deux le réutilisent tel quel, plutôt que de dupliquer la
+l'application : les deux le réutilisent tel quel plutôt que de dupliquer la
 logique de chargement/agrégation à deux endroits.
 
 ## Installation
@@ -59,8 +64,8 @@ pip install -r requirements.txt
 Télécharge ensuite le fichier national des prénoms sur
 [insee.fr/fr/statistiques/8595130](https://www.insee.fr/fr/statistiques/8595130)
 (fichier `prenoms-2025-nat_csv.zip`), dézippe-le, et place le `.csv` obtenu
-dans `data/raw/`. Ce fichier n'est pas versionné (4 Mo compressés, régulièrement
-mis à jour par l'INSEE) : le README indique où le trouver plutôt que de le dupliquer.
+dans `data/raw/`. Il n'est pas versionné (fichier assez lourd, régulièrement
+mis à jour par l'INSEE), donc le README indique juste où le trouver.
 
 ## Utilisation
 
@@ -83,35 +88,31 @@ pytest -v
 ```
 
 Les tests sur `data.py` et `analysis.py` utilisent des données synthétiques et
-tournent sans le fichier INSEE. Les tests de `app/streamlit_app.py`
-nécessitent le fichier réel dans `data/raw/` et sont automatiquement ignorés
-sinon (c'est pourquoi la CI GitHub Actions, qui n'a pas ce fichier, passe
-quand même : elle couvre le cœur logique du projet).
+tournent sans le fichier INSEE. Ceux sur `app/streamlit_app.py` ont besoin du
+vrai fichier dans `data/raw/` et sont automatiquement ignorés sinon — c'est
+pourquoi la CI GitHub Actions (qui n'a pas ce fichier) passe quand même, en
+couvrant le cœur logique du projet.
 
 ## Choix techniques
 
-- **Séparation logique / présentation** : `src/prenoms` ne dépend ni de
-  Jupyter ni de Streamlit, ce qui le rend testable en isolation et réutilisable
-  entre le notebook et l'application.
-- **Schéma du fichier vérifié, pas supposé** : la documentation publique de
-  l'INSEE ne détaillait pas le format exact des colonnes ; le code a été
-  adapté et testé sur le vrai fichier plutôt que sur une hypothèse (voir
-  l'historique de commits).
-- **Le rang est fourni par l'INSEE et réutilisé tel quel** pour le palmarès,
-  plutôt que recalculé — plus simple et fidèle à la méthodologie de l'INSEE.
-- **Comparaison tolérante aux prénoms sans données** : `comparer_prenoms`
-  affiche une courbe à zéro plutôt que de faire échouer toute la comparaison
-  si un des prénoms n'a pas de données pour le sexe demandé.
+- Séparer `src/prenoms` de Jupyter et de Streamlit pour pouvoir le tester
+  seul et le réutiliser aux deux endroits sans dupliquer la logique.
+- Le format du fichier INSEE n'est pas celui que la doc publique laissait
+  penser (voir l'historique de commits) : j'ai préféré adapter le code au
+  vrai fichier plutôt qu'à ce qui était documenté.
+- Le rang du palmarès est repris tel quel depuis la colonne fournie par
+  l'INSEE plutôt que recalculé, pour rester fidèle à leur méthodologie.
+- `comparer_prenoms` met une courbe à zéro plutôt que de planter si un des
+  prénoms comparés n'a pas de données pour le sexe demandé.
 
 ## Pistes d'amélioration
 
-- Ajouter le fichier par département (`prenoms-2025-dpt_csv.zip`) pour une
-  vue géographique
-- Mettre en cache les agrégations les plus courantes pour accélérer l'app sur
-  de très gros volumes de recherches
-- Déployer l'application sur Streamlit Community Cloud
-- Ajouter une recherche approximative (tolérance aux fautes de frappe /
-  accents) sur le champ prénom
+Si je continue ce projet à l'occasion :
+
+- Ajouter le fichier par département pour une vue géographique
+- Cache sur les agrégations les plus fréquentes si le volume de recherches augmente
+- Déployer l'app sur Streamlit Community Cloud
+- Recherche tolérante aux fautes de frappe / accents sur le champ prénom
 
 ## Licence
 
