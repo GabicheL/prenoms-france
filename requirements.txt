@@ -1,6 +1,6 @@
 pandas>=2.2
 matplotlib>=3.8
 plotly>=5.20
-streamlit>=1.35
+streamlit>=1.60
 pytest>=8.0
 jupyter>=1.0
